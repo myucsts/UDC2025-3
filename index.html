@@ -79,6 +79,14 @@
       display: grid;
       gap: 16px;
       padding: 0 20px 28px;
+      grid-template-areas:
+        "map"
+        "emergency"
+        "panel";
+    }
+
+    .map-panel {
+      grid-area: map;
     }
 
     #map {
@@ -91,6 +99,7 @@
     }
 
     .panel {
+      grid-area: panel;
       background: rgba(255, 255, 255, 0.78);
       border-radius: 18px;
       padding: 16px;
@@ -220,9 +229,10 @@
     }
 
     .emergency-actions {
+      grid-area: emergency;
       display: flex;
       gap: 10px;
-      margin-top: 12px;
+      margin-top: 0;
       flex-wrap: wrap;
     }
 
@@ -285,6 +295,9 @@
     @media (min-width: 900px) {
       .content {
         grid-template-columns: 1.1fr 0.9fr;
+        grid-template-areas:
+          "map panel"
+          "emergency panel";
         align-items: start;
       }
 
@@ -303,7 +316,7 @@
     </header>
 
     <main class="content">
-      <section>
+      <section class="map-panel">
         <div id="map" aria-label="AEDマップ"></div>
       </section>
       <div class="emergency-actions" aria-label="緊急通報">
