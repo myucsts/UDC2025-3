@@ -218,6 +218,30 @@
       font-size: 0.9rem;
     }
 
+    .emergency-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .emergency-button {
+      flex: 1;
+      min-width: 140px;
+      text-align: center;
+      padding: 12px 10px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #fff;
+      background: linear-gradient(120deg, #d62828, #f77f00);
+      box-shadow: 0 10px 24px rgba(214, 40, 40, 0.2);
+    }
+
+    .emergency-button.police {
+      background: linear-gradient(120deg, #003049, #006699);
+    }
+
     .loading {
       position: fixed;
       inset: 0;
@@ -304,6 +328,10 @@
         </div>
         <div id="resultMeta" class="meta"></div>
         <div id="cards" class="cards"></div>
+        <div class="emergency-actions" aria-label="緊急通報">
+          <a class="emergency-button" href="tel:119">119番通報</a>
+          <a class="emergency-button police" href="tel:110">110番通報</a>
+        </div>
       </section>
     </main>
   </div>
