@@ -103,6 +103,35 @@
       align-items: center;
     }
 
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .mode-toggle input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-toggle label {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      background: rgba(11, 27, 43, 0.08);
+      cursor: pointer;
+    }
+
+    .mode-toggle input:checked + label {
+      background: rgba(234, 79, 61, 0.2);
+      color: #9f2b1d;
+      font-weight: 600;
+    }
+
     .search input {
       flex: 1;
       border: none;
@@ -254,6 +283,20 @@
       </section>
 
       <section class="panel">
+        <div class="mode-toggle" aria-label="夜間モード切り替え">
+          <div>
+            <input type="radio" id="mode-auto" name="nightMode" value="auto" checked />
+            <label for="mode-auto">自動（時間帯）</label>
+          </div>
+          <div>
+            <input type="radio" id="mode-on" name="nightMode" value="on" />
+            <label for="mode-on">夜間モードオン</label>
+          </div>
+          <div>
+            <input type="radio" id="mode-off" name="nightMode" value="off" />
+            <label for="mode-off">夜間モードオフ</label>
+          </div>
+        </div>
         <div class="search">
           <input id="searchInput" type="text" placeholder="住所・施設名で検索" />
           <button id="searchButton">検索</button>
@@ -289,12 +332,14 @@
     const loadingEl = document.getElementById("loading");
     const searchInput = document.getElementById("searchInput");
     const searchButton = document.getElementById("searchButton");
+    const modeInputs = document.querySelectorAll("input[name=\"nightMode\"]");
 
     let map;
     let userMarker;
     let aedMarkers = [];
     let aedData = [];
     let userPosition = DEFAULT_POSITION;
+    let nightModeSetting = "auto";
 
     const userIcon = L.icon({
       iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -354,6 +399,8 @@
     }
 
     function getNightMode() {
+      if (nightModeSetting === "on") return true;
+      if (nightModeSetting === "off") return false;
       const hour = new Date().getHours();
       return hour >= 18 || hour < 7;
     }
@@ -399,9 +446,10 @@
 
     function rankEntries(entries) {
       const nightMode = getNightMode();
+      const modeLabel = nightModeSetting === "auto" ? "自動" : "手動";
       statusEl.textContent = nightMode
-        ? "夜間モード: 屋外を優先しています"
-        : "昼間モード: 距離順で表示";
+        ? `夜間モード（${modeLabel}）: 屋外を優先しています`
+        : `昼間モード（${modeLabel}）: 距離順で表示`;
       statusEl.classList.toggle("night", nightMode);
 
       return entries
@@ -449,6 +497,7 @@
     function updateMeta(count) {
       metaEl.innerHTML = `
         <span class="pill">表示件数 ${count}件</span>
+        <span class="pill">夜間モード ${nightModeSetting === "auto" ? "自動" : nightModeSetting === "on" ? "オン" : "オフ"}</span>
       `;
     }
 
@@ -538,6 +587,12 @@
       if (event.key === "Enter") {
         filterEntries();
       }
+    });
+    modeInputs.forEach(input => {
+      input.addEventListener("change", event => {
+        nightModeSetting = event.target.value;
+        filterEntries();
+      });
     });
 
     init();
