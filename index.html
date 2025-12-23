@@ -296,8 +296,8 @@
 <body>
   <div class="app">
     <header>
-      <h1 class="title">Saitama AED Locator</h1>
-      <p class="subtitle">夜間は屋外優先で案内する、緊急時のためのAED検索</p>
+      <h1 class="title">埼玉県AED設置場所検索システム</h1>
+      <p class="subtitle">GPSを活用したAED設置場所への案内システム</p>
       <div id="status" class="status">位置情報とデータを取得中...</div>
     </header>
 
@@ -305,6 +305,10 @@
       <section>
         <div id="map" aria-label="AEDマップ"></div>
       </section>
+      <div class="emergency-actions" aria-label="緊急通報">
+        <a class="emergency-button" href="tel:119">119番通報</a>
+        <a class="emergency-button police" href="tel:110">110番通報</a>
+      </div>
 
       <section class="panel">
         <div class="mode-toggle" aria-label="夜間モード切り替え">
@@ -328,10 +332,6 @@
         </div>
         <div id="resultMeta" class="meta"></div>
         <div id="cards" class="cards"></div>
-        <div class="emergency-actions" aria-label="緊急通報">
-          <a class="emergency-button" href="tel:119">119番通報</a>
-          <a class="emergency-button police" href="tel:110">110番通報</a>
-        </div>
       </section>
     </main>
   </div>
