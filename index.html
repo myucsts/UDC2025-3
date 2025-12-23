@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Saitama AED Locator (Night-Adaptive)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    :root {
+      --ink: #0b1b2b;
+      --cream: #f6f1e7;
+      --accent: #ea4f3d;
+      --accent-2: #ffb200;
+      --night: #1f2a38;
+      --sky: #8fb9ff;
+      --shadow: 0 16px 40px rgba(8, 20, 35, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top, #fbe9d1 0%, #f6f1e7 45%, #e9f3ff 100%);
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 24px 20px 14px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.6rem;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: #4a5b6b;
+      font-size: 0.95rem;
+    }
+
+    .status {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: var(--shadow);
+    }
+
+    .status.night {
+      background: rgba(31, 42, 56, 0.9);
+      color: #f3f6fb;
+    }
+
+    .content {
+      display: grid;
+      gap: 16px;
+      padding: 0 20px 28px;
+    }
+
+    #map {
+      height: 46vh;
+      min-height: 300px;
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 3px solid rgba(11, 27, 43, 0.08);
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.78);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+
+    .search {
+      display: flex; 
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search input {
+      flex: 1;
+      border: none;
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      box-shadow: inset 0 0 0 2px rgba(11, 27, 43, 0.08);
+    }
+
+    .search button {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .cards {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(8, 20, 35, 0.12);
+      border: 1px solid rgba(11, 27, 43, 0.08);
+      animation: lift 0.5s ease both;
+    }
+
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+    }
+
+    .card p {
+      margin: 4px 0;
+      color: #45566b;
+      font-size: 0.9rem;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      background: rgba(234, 79, 61, 0.15);
+      color: #9f2b1d;
+    }
+
+    .pill.outdoor {
+      background: rgba(255, 178, 0, 0.25);
+      color: #8b5a00;
+    }
+
+    .pill.indoor {
+      background: rgba(31, 42, 56, 0.12);
+      color: #31455b;
+    }
+
+    .route-button {
+      display: inline-flex;
+      justify-content: center;
+      padding: 10px 12px;
+      background: linear-gradient(120deg, var(--accent), #ff7c4b);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 27, 43, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.1rem;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes lift {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (min-width: 900px) {
+      .content {
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: start;
+      }
+
+      #map {
+        height: 70vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1 class="title">Saitama AED Locator</h1>
+      <p class="subtitle">夜間は屋外優先で案内する、緊急時のためのAED検索</p>
+      <div id="status" class="status">位置情報とデータを取得中...</div>
+    </header>
+
+    <main class="content">
+      <section>
+        <div id="map" aria-label="AEDマップ"></div>
+      </section>
+
+      <section class="panel">
+        <div class="search">
+          <input id="searchInput" type="text" placeholder="住所・施設名で検索" />
+          <button id="searchButton">検索</button>
+        </div>
+        <div id="resultMeta" class="meta"></div>
+        <div id="cards" class="cards"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="loading" class="loading">
+    <div>
+      <div class="spinner"></div>
+      <div>読み込み中...</div>
+    </div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    const DEFAULT_POSITION = { lat: 35.8569, lng: 139.6489 };
+    const DATA_URL = "./data.csv";
+    const OUTDOOR_KEYWORDS = ["公園", "広場", "駅前", "交番", "屋外", "外壁"];
+    const INDOOR_KEYWORDS = ["校舎内", "事務室", "受付", "ロビー", "職員室", "店舗内"];
+
+    const statusEl = document.getElementById("status");
+    const cardsEl = document.getElementById("cards");
+    const metaEl = document.getElementById("resultMeta");
+    const loadingEl = document.getElementById("loading");
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+
+    let map;
+    let userMarker;
+    let aedMarkers = [];
+    let aedData = [];
+    let userPosition = DEFAULT_POSITION;
+
+    const userIcon = L.icon({
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+    });
+
+    const aedIcon = L.icon({
+      iconUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-red.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+    });
+
+    function showLoading(show) {
+      loadingEl.classList.toggle("active", show);
+    }
+
+    function setupMap() {
+      map = L.map("map").setView([userPosition.lat, userPosition.lng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      userMarker = L.marker([userPosition.lat, userPosition.lng], { icon: userIcon })
+        .addTo(map)
+        .bindPopup("現在地");
+    }
+
+    function updateUserMarker() {
+      if (!userMarker) return;
+      userMarker.setLatLng([userPosition.lat, userPosition.lng]);
+      map.setView([userPosition.lat, userPosition.lng], 14);
+    }
+
+    function clearMarkers() {
+      aedMarkers.forEach(marker => map.removeLayer(marker));
+      aedMarkers = [];
+    }
+
+    function createMarkers(entries) {
+      clearMarkers();
+      entries.forEach(entry => {
+        const marker = L.marker([entry.lat, entry.lng], { icon: aedIcon })
+          .addTo(map)
+          .bindPopup(
+            `<strong>${entry.name}</strong><br>` +
+            `${entry.location}<br>` +
+            `${entry.address}`
+          );
+        aedMarkers.push(marker);
+      });
+    }
+
+    function getNightMode() {
+      const hour = new Date().getHours();
+      return hour >= 18 || hour < 7;
+    }
+
+    function inferEnvironment(entry) {
+      const target = `${entry.name} ${entry.location}`;
+      if (OUTDOOR_KEYWORDS.some(keyword => target.includes(keyword))) {
+        return "屋外";
+      }
+      if (INDOOR_KEYWORDS.some(keyword => target.includes(keyword))) {
+        return "屋内";
+      }
+      return "屋内（利用制限あり）";
+    }
+
+    function toRad(value) {
+      return (value * Math.PI) / 180;
+    }
+
+    function calcDistance(a, b) {
+      const R = 6371000;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+
+      const sinDLat = Math.sin(dLat / 2);
+      const sinDLng = Math.sin(dLng / 2);
+
+      const aa = sinDLat * sinDLat +
+        Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+      const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+
+      return R * c;
+    }
+
+    function formatDistance(distance) {
+      if (distance < 1000) {
+        return `${Math.round(distance)}m`;
+      }
+      return `${(distance / 1000).toFixed(2)}km`;
+    }
+
+    function rankEntries(entries) {
+      const nightMode = getNightMode();
+      statusEl.textContent = nightMode
+        ? "夜間モード: 屋外を優先しています"
+        : "昼間モード: 距離順で表示";
+      statusEl.classList.toggle("night", nightMode);
+
+      return entries
+        .map(entry => {
+          const distance = calcDistance(userPosition, entry);
+          const environment = inferEnvironment(entry);
+          let score = distance;
+          if (nightMode) {
+            score = environment === "屋外" ? distance * 0.7 : distance * 1.4;
+          }
+          return { ...entry, distance, environment, score };
+        })
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 5);
+    }
+
+    function renderCards(entries) {
+      cardsEl.innerHTML = "";
+      if (entries.length === 0) {
+        cardsEl.innerHTML = "<p>該当するAEDが見つかりませんでした。</p>";
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.animationDelay = `${index * 0.08}s`;
+
+        const envClass = entry.environment === "屋外" ? "outdoor" : "indoor";
+        card.innerHTML = `
+          <h3>${entry.name}</h3>
+          <p>${entry.location}</p>
+          <p>${entry.address}</p>
+          <div class="meta">
+            <span class="pill ${envClass}">${entry.environment}</span>
+            <span class="pill">距離 ${formatDistance(entry.distance)}</span>
+            <span class="pill">${entry.hours}</span>
+          </div>
+          <a class="route-button" href="https://www.google.com/maps/dir/?api=1&destination=${entry.lat},${entry.lng}&travelmode=walking" target="_blank" rel="noopener">Googleマップで経路案内</a>
+        `;
+        cardsEl.appendChild(card);
+      });
+    }
+
+    function updateMeta(count) {
+      metaEl.innerHTML = `
+        <span class="pill">表示件数 ${count}件</span>
+      `;
+    }
+
+    function filterEntries() {
+      const query = searchInput.value.trim();
+      let filtered = aedData;
+      if (query) {
+        filtered = aedData.filter(entry => {
+          return entry.name.includes(query) || entry.address.includes(query);
+        });
+      }
+      const ranked = rankEntries(filtered);
+      renderCards(ranked);
+      updateMeta(ranked.length);
+      createMarkers(ranked);
+    }
+
+    function normalizeRow(row) {
+      return {
+        name: row["施設名"],
+        address: row["住所"],
+        location: row["設置場所"],
+        lat: parseFloat(row["緯度"]),
+        lng: parseFloat(row["経度"]),
+        hours: row["利用可能時間"] || "利用時間不明"
+      };
+    }
+
+    function loadData() {
+      return fetch(DATA_URL)
+        .then(response => {
+          if (!response.ok) throw new Error("CSV読み込みに失敗しました。");
+          return response.text();
+        })
+        .then(text => {
+          const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+          aedData = parsed.data.map(normalizeRow).filter(item => !Number.isNaN(item.lat));
+        });
+    }
+
+    function setStatusError(message) {
+      statusEl.textContent = message;
+      statusEl.classList.remove("night");
+    }
+
+    function init() {
+      showLoading(true);
+      setupMap();
+
+      const geoPromise = new Promise(resolve => {
+        if (!navigator.geolocation) {
+          setStatusError("位置情報が利用できません。埼玉県庁を表示します。");
+          resolve(DEFAULT_POSITION);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          () => {
+            setStatusError("位置情報が取得できません。埼玉県庁を表示します。");
+            resolve(DEFAULT_POSITION);
+          },
+          { enableHighAccuracy: true, timeout: 7000 }
+        );
+      });
+
+      Promise.all([geoPromise, loadData()])
+        .then(([position]) => {
+          userPosition = position;
+          updateUserMarker();
+          filterEntries();
+        })
+        .catch(() => {
+          setStatusError("データの読み込みに失敗しました。");
+        })
+        .finally(() => {
+          showLoading(false);
+        });
+    }
+
+    searchButton.addEventListener("click", filterEntries);
+    searchInput.addEventListener("keyup", event => {
+      if (event.key === "Enter") {
+        filterEntries();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
